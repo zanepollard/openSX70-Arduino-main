@@ -126,6 +126,7 @@ void setup() {//setup - Inizialize
 
 /*LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP LOOP*/
 void loop() {
+  selector = myDongle.selector();
   #if SONAR
     preFocus();
   #endif
