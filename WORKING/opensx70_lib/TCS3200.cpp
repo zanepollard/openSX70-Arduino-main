@@ -22,6 +22,7 @@
   
   // initialise Timer 1 for light sensor integration.
   void tcs3200_init(){
+    integrationFinished = 0; //not sure if needed
     //TCS3200_S0_Pin = HIGH(3.3V) Jumper on PCB
     //TCS3200_S1_Pin = On Pin 9 ATMEGA
     //TCS3200_S2_Pin = HIGH(3.3V) Jumper on PCB
@@ -41,7 +42,6 @@
     //digitalWrite(S3_Pin, LOW); //filter LOW = clear | HIGH = green
   
     cli(); //Stop all Interupts
-  
     TIFR1 = (1 << ICF1) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1);   // Clear all interrupts flags
     // Set timer 1(16 Bit) for normal operation, clocked by rising edge on T1 (port D5 / pin 5)
     TCCR1A = 0; //(Counter1 Control Register A)
@@ -72,21 +72,26 @@
       }/* else if (iso == ISO_600BW){
         outputCompare = A400;
       }*/
+      else{
+        outputCompare = iso; //FF Delay Magicnumber      
+      }
+        //Serial.print("outputCompare: ");
+        //Serial.println(outputCompare);
   }
   
   int meter_compute(unsigned int _interval) //Light Meter Helper Compute
   {
     int _myISO = ReadISO();
-    static unsigned long previousMillis = 0;
+    static uint32_t previousMillis = 0;
     static bool measuring = false;
     //long interval = 200;
-    //unsigned long counter; defined elsewhere
+    //uint32_t counter; defined elsewhere
   
-    //unsigned long PredExp;
-    unsigned long PredExp;
+    //uint32_t PredExp;
+    uint32_t PredExp;
   
-    //  unsigned long currentMillis = millis();
-    //  unsigned long timeMillis;
+    //  uint32_t currentMillis = millis();
+    //  uint32_t timeMillis;
     meter_set_iso(_myISO); //set outputcompare Value for the selected ISO -- where the Timer is counting Pulses from Lightsensor to
   
     if (!measuring)
@@ -97,10 +102,10 @@
     }
     else
     {
-      unsigned long myMillis = millis() - previousMillis;
+      uint32_t myMillis = millis() - previousMillis;
       if (myMillis  >= _interval )
       {
-        unsigned long counter = TCNT1; //Timer count Value
+        uint32_t counter = TCNT1; //Timer count Value
         measuring = false;
         PredExp = round((((float)myMillis) / ((float) counter)) * (float)outputCompare);
         PredExp = PredExp + ShutterConstant;
@@ -124,9 +129,9 @@
         Serial.print("Lightmeter Helper compute: Uses this ISO for metering: ");
         Serial.println(_myISO);
       #endif*/
-      static unsigned long previousMillis = 0;
+      static uint32_t previousMillis = 0;
       static bool measuring = false;
-      unsigned long PredExp;
+      uint32_t PredExp;
       meter_set_iso(_myISO); //set outputcompare Value for the selected ISO -- the Timer is counting Pulses from Lightsensor to this outputcompare Value
     
       if (!measuring)
@@ -137,13 +142,13 @@
       }
       else
       {
-        unsigned long myMillis = millis() - previousMillis;
+        uint32_t myMillis = millis() - previousMillis;
         if (myMillis  >= _interval )
         {
-          unsigned long counter = TCNT1; //Timer count Value
+          uint32_t counter = TCNT1; //Timer count Value
           measuring = false;
           PredExp = round((((float)myMillis) / ((float) counter)) * (float)outputCompare);
-          #if LMDEBUG
+          #if LMHELPERDEBUG
             Serial.print("pr mil: ");
             Serial.print(previousMillis);
             Serial.print(" mil: ");
@@ -156,9 +161,6 @@
             Serial.print(outputCompare);
             Serial.print(" PredExp: ");
             Serial.println(PredExp);
-          #endif
-          #if ALMDEBUG
-            //Serial.println(counter);
           #endif
           PredExp = PredExp + ShutterConstant;
           if(PredExp>44250){ //bigger then a reliable Value | doesnt know if its needed
@@ -366,7 +368,7 @@ ISR (TIMER1_CAPT_vect)
     }
     else if (_type == 1) //Automode
     {
-      #if LMDEBUG
+      #if LMHELPERDEBUG
       Serial.print ("LM Helper PredictedExposure on Auto Mode , PredictedExposure: ");
       Serial.println (PredictedExposure);
       #endif
